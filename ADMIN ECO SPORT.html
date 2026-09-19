@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECO SPORT AI CUSTOMER SERVICE</title>
+    <!-- Puter.js untuk AI -->
+    <script src="https://js.puter.com/v2/"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; }
+        .chat-bg { background-color: #efeae2; background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIiBmaWxsPSJub25lIiBvcGFjaXR5PSIwLjA1Ij48cGF0aCBkPSJNMjAgMjBIMEwwIDQwTDIwIDIwek00MCAyMEgyMEEyMCAyMCAwIDAwMCA0MGgyMHoiIGZpbGw9IiMwMDAiLz48L3N2Zz4='); }
+        .chat-bubble-in { background-color: #ffffff; border-radius: 10px 0 10px 10px; }
+        .chat-bubble-out { background-color: #d9fdd3; border-radius: 0 10px 10px 10px; }
+        .chat-bubble-ai { background-color: #e7f3ff; border-radius: 0 10px 10px 10px; border-left: 4px solid #25D366; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .scroll-y { overflow-y: auto; scrollbar-width: thin; scrollbar-color: #ccc transparent; }
+        .scroll-y::-webkit-scrollbar { width: 6px; }
+        .scroll-y::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+        .pulse-green { animation: pulse-green 2s infinite; }
+        @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(37, 211, 102, 0); } 100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); } }
+    </style>
+</head>
+<body class="h-screen flex flex-col bg-gray-100">
+
+    <!-- Header -->
+    <header class="bg-green-600 text-white p-3 flex justify-between items-center shadow-md z-20">
+        <div class="flex items-center space-x-3">
+            <i class="fas fa-robot text-2xl"></i>
+            <div>
+                <h1 class="font-bold text-lg leading-tight">ECO SPORT AI CUSTOMER SERVICE</h1>
+                <p class="text-xs text-green-100">Percetakan Jersey Eco Sport</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-3 text-sm">
+            <a href="https://wa.me/6285709693800" target="_blank" class="flex items-center space-x-2 bg-green-700 px-3 py-1 rounded-full hover:bg-green-800 transition">
+                <i class="fab fa-whatsapp"></i> 085709693800
+            </a>
+            <button onclick="openSettings()" class="bg-white text-green-600 px-3 py-1 rounded-full font-semibold hover:bg-green-50 transition flex items-center">
+                <i class="fas fa-cog mr-1"></i> Pengaturan
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- Left Sidebar: Chat List -->
+        <aside class="w-full md:w-1/4 bg-white border-r border-gray-200 flex flex-col">
+            <div class="p-4 border-b">
+                <h2 class="font-bold text-gray-700 mb-2">Dashboard Statistik</h2>
+                <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                    <div class="bg-gray-50 p-2 rounded border border-gray-100">
+                        <span class="block font-bold text-gray-800 text-lg" id="statTotal">0</span>
+                        <span class="text-gray-500">Chat Hari Ini</span>
+                    </div>
+                    <div class="bg-blue-50 p-2 rounded border border-blue-100">
+                        <span class="block font-bold text-blue-600 text-lg" id="statAI">0</span>
+                        <span class="text-gray-500">Dijawab AI</span>
+                    </div>
+                    <div class="bg-green-50 p-2 rounded border border-green-100">
+                        <span class="block font-bold text-green-600 text-lg" id="statAdmin">0</span>
+                        <span class="text-gray-500">Dijawab Admin</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-1 scroll-y" id="chatList">
+                <div class="text-center text-gray-400 p-10">
+                    <i class="fab fa-whatsapp text-4xl mb-3"></i>
+                    <p>Menunggu pesan masuk...</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center: Chat Window -->
+        <main class="flex-1 flex flex-col bg-gray-50 hidden md:flex">
+            <div class="bg-gray-100 p-3 border-b flex justify-between items-center" id="chatHeader" style="display: none;">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 font-bold" id="chatAvatar">?</div>
+                    <div>
+                        <h3 class="font-semibold text-gray-800" id="chatName">Pilih percakapan</h3>
+                        <span class="text-xs text-gray-500 flex items-center gap-1" id="chatStatus">Status: -</span>
+                    </div>
+                </div>
+                <div class="flex space-x-2" id="chatActions">
+                    <button onclick="adminTakeover()" class="bg-blue-500 text-white px-3 py-2 rounded-lg text-xs hover:bg-blue-600 transition flex items-center gap-2 font-semibold">
+                        <i class="fas fa-hand-paper"></i> Ambil Alih
+                    </button>
+                    <button onclick="returnToAI()" class="bg-green-500 text-white px-3 py-2 rounded-lg text-xs hover:bg-green-600 transition flex items-center gap-2 font-semibold">
+                        <i class="fas fa-robot"></i> Kembalikan ke AI
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex-1 chat-bg p-4 scroll-y" id="chatMessages">
+                <div class="text-center text-gray-500 mt-20">
+                    <i class="fab fa-whatsapp text-6xl mb-4 text-gray-300"></i>
+                    <h2 class="text-xl font-light text-gray-400">Percakapan Eco Sport</h2>
+                    <p class="text-sm text-gray-400 mt-2">Pilih pelanggan di sebelah kiri untuk melihat percakapan</p>
+                </div>
+            </div>
+
+            <div class="bg-gray-100 p-3 border-t flex items-center space-x-2" id="chatInputArea" style="display: none;">
+                <input type="text" id="messageInput" onkeypress="handleEnter(event)" class="flex-1 px-4 py-3 rounded-full border border-gray-300 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" placeholder="Ketik pesan sebagai Admin...">
+                <button onclick="adminSendMessage()" class="bg-green-600 text-white p-3 rounded-full hover:bg-green-700 transition w-12 h-12 flex justify-center items-center">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </main>
+
+        <!-- Right Sidebar: Customer Details -->
+        <aside class="w-1/5 bg-white border-l border-gray-200 p-4 scroll-y hidden md:block" id="customerDetailPanel">
+            <div class="text-center text-gray-400 mt-10">
+                <i class="fas fa-user-circle text-5xl mb-3"></i>
+                <p class="text-sm">Detail pelanggan akan muncul di sini</p>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex justify-center items-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] scroll-y flex flex-col">
+            <div class="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i class="fas fa-cog text-green-600"></i> Pengaturan Sistem</h2>
+                <button onclick="closeSettings()" class="text-gray-400 hover:text-gray-800 text-2xl">&times;</button>
+            </div>
+            <div class="p-6 space-y-6">
+                
+                <div class="border-b pb-4">
+                    <h3 class="font-semibold text-gray-700 mb-3">Mode & Status</h3>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <label class="flex items-center space-x-2 cursor-pointer p-2 border rounded-lg hover:bg-gray-50">
+                            <input type="checkbox" id="setAutoReply" checked> <span class="font-medium">Auto Reply ON/OFF</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer p-2 border rounded-lg hover:bg-gray-50">
+                            <input type="checkbox" id="setAiActive" checked> <span class="font-medium">AI Active ON/OFF</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="border-b pb-4">
+                    <h3 class="font-semibold text-gray-700 mb-3">Waktu Respon AI</h3>
+                    <p class="text-xs text-gray-500 mb-2">Waktu tunggu sebelum AI menjawab jika admin tidak membalas.</p>
+                    <select id="setTimer" class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none">
+                        <option value="10">10 Detik</option>
+                        <option value="30" selected>30 Detik (Default)</option>
+                        <option value="60">1 Menit</option>
+                        <option value="120">2 Menit</option>
+                        <option value="300">5 Menit</option>
+                    </select>
+                </div>
+
+                <div class="border-b pb-4">
+                    <h3 class="font-semibold text-gray-700 mb-3">Jam Operasional</h3>
+                    <div class="text-sm space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span>Senin - Sabtu</span>
+                            <input type="text" value="08:00 - 21:00 WIB" class="border p-1 rounded-lg text-center w-40 focus:ring-1 focus:ring-green-500 focus:outline-none">
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Minggu</span>
+                            <input type="text" value="10:00 - 18:00 WIB" class="border p-1 rounded-lg text-center w-40 focus:ring-1 focus:ring-green-500 focus:outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-b pb-4">
+                    <h3 class="font-semibold text-gray-700 mb-3">Database Harga, FAQ, Bahan, Ukuran</h3>
+                    <textarea id="setDatabase" class="w-full h-40 border rounded-lg p-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none">Harga Jersey Futsal: 85.000/pcs. Harga Jersey Bola: 95.000/pcs. Minimal Order: 10 pcs. Bahan: Dryfit, Mesh, Full Print. Ukuran: S, M, L, XL, XXL. Lama Produksi: 5-7 Hari Kerja. Desain Gratis untuk minimal order 10 pcs.</textarea>
+                    <p class="text-xs text-gray-500 mt-1">AI akan membaca teks ini sebagai database pengetahuan. Ubah sesuai kebutuhan.</p>
+                </div>
+
+                <div class="border-b pb-4">
+                    <h3 class="font-semibold text-gray-700 mb-3">Prompt Internal AI (Identitas)</h3>
+                    <textarea id="setSystemPrompt" class="w-full h-32 border rounded-lg p-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none">Kamu adalah Eco Sport AI, asisten customer service untuk Percetakan Jersey Eco Sport. Tujuanmu adalah membantu pelanggan mendapatkan informasi dan melakukan pemesanan jersey dengan cepat, ramah, dan akurat. Jawablah dalam Bahasa Indonesia. Gunakan informasi dari database Eco Sport sebagai sumber utama. Jangan mengarang harga, stok, bahan, ukuran, waktu produksi, ongkir, atau kebijakan. Jika informasi tidak tersedia, katakan bahwa informasi tersebut perlu dikonfirmasi kepada admin. Jangan menanyakan terlalu banyak pertanyaan sekaligus. Pahami konteks percakapan sebelumnya. Jika pelanggan ingin melakukan pemesanan, bantu kumpulkan detail pesanannya. Jika pelanggan komplain, meminta negosiasi khusus, meminta refund, atau membutuhkan keputusan manusia, tandai percakapan sebagai PERLU INTERVENSI ADMIN. Jika admin mengambil alih percakapan, jangan mengirim balasan AI. Jika pelanggan bertanya apakah kamu AI, jawab dengan jujur bahwa kamu adalah Eco Sport AI. Prioritaskan kepuasan pelanggan.</textarea>
+                </div>
+
+                <div class="bg-yellow-50 border border-yellow-200 p-4 rounded-lg text-sm text-yellow-800">
+                    <p class="font-bold mb-1 flex items-center gap-2"><i class="fas fa-shield-alt"></i> Catatan Arsitektur Backend</p>
+                    <p>Aplikasi ini siap dihubungkan dengan WhatsApp Business API. Webhook dari provider akan mengirim payload ke endpoint backend. Backend akan memproses logika timer, memanggil Puter AI, dan mengirim balasan kembali via API provider. Dashboard ini berfungsi sebagai GUI untuk memantau proses tersebut.</p>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-4">
+                    <button onclick="closeSettings()" class="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 font-semibold">Batal</button>
+                    <button onclick="saveSettings()" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-semibold">Simpan Pengaturan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- STATE MANAGEMENT ---
+        let appState = {
+            waNumber: '085709693800',
+            aiActive: true,
+            autoReply: true,
+            timer: 30,
+            systemPrompt: "Kamu adalah Eco Sport AI, asisten customer service untuk Percetakan Jersey Eco Sport. Jawablah dalam Bahasa Indonesia. Jangan mengarang harga. Jika tidak tahu, arahkan ke admin. Tanyakan detail pesanan satu per satu.",
+            database: "Harga Jersey Futsal: 85.000/pcs. Harga Jersey Bola: 95.000/pcs. Minimal Order: 10 pcs. Bahan: Dryfit, Mesh, Full Print. Ukuran: S, M, L, XL, XXL. Lama Produksi: 5-7 Hari Kerja.",
+            stats: { ai: 0, admin: 0 },
+            chats: [],
+            activeChatId: null
+        };
+
+        // --- UTILITY FUNCTIONS ---
+        function formatTime(date) {
+            return new Date(date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function renderChatList() {
+            const list = document.getElementById('chatList');
+            if (appState.chats.length === 0) {
+                list.innerHTML = `<div class="text-center text-gray-400 p-10"><i class="fab fa-whatsapp text-4xl mb-3"></i><p>Menunggu pesan masuk...</p></div>`;
+                return;
+            }
+            list.innerHTML = '';
+            appState.chats.forEach(chat => {
+                const item = document.createElement('div');
+                let activeClass = appState.activeChatId === chat.id ? 'bg-green-50 border-l-4 border-green-500' : 'border-l-4 border-transparent';
+                item.className = `p-3 border-b cursor-pointer hover:bg-gray-50 flex items-center space-x-3 ${activeClass}`;
+                item.onclick = () => selectChat(chat.id);
+                
+                let statusColor = 'bg-gray-400';
+                if(chat.status.includes('AI')) statusColor = 'bg-green-500';
+                if(chat.status.includes('ADMIN')) statusColor = 'bg-blue-500';
+                if(chat.status.includes('INTERVENSI')) statusColor = 'bg-red-500 pulse-green';
+
+                let lastMsg = chat.messages.length > 0 ? chat.messages[chat.messages.length-1].text : 'No messages';
+                
+                item.innerHTML = `
+                    <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center text-gray-600 font-bold text-lg">
+                        ${chat.name.charAt(0)}
+                    </div>
+                    <div class="flex-1 overflow-hidden">
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-semibold text-gray-800 text-sm truncate">${chat.name}</h4>
+                            <span class="text-xs text-gray-400 flex-shrink-0">${chat.messages.length > 0 ? formatTime(chat.messages[chat.messages.length-1].time) : ''}</span>
+                        </div>
+                        <p class="text-xs text-gray-500 truncate">${lastMsg.substring(0, 30)}...</p>
+                    </div>
+                    <span class="status-dot ${statusColor} flex-shrink-0"></span>
+                `;
+                list.appendChild(item);
+            });
+            updateStats();
+        }
+
+        function updateStats() {
+            document.getElementById('statTotal').innerText = appState.chats.length;
+            document.getElementById('statAI').innerText = appState.stats.ai;
+            document.getElementById('statAdmin').innerText = appState.stats.admin;
+        }
+
+        function renderMessages() {
+            const chat = appState.chats.find(c => c.id === appState.activeChatId);
+            const msgArea = document.getElementById('chatMessages');
+            
+            if (!chat) return;
+            
+            document.getElementById('chatHeader').style.display = 'flex';
+            document.getElementById('chatInputArea').style.display = 'flex';
+            document.getElementById('chatAvatar').innerText = chat.name.charAt(0);
+            document.getElementById('chatName').innerText = chat.name;
+            document.getElementById('chatStatus').innerHTML = `<span class="status-dot bg-gray-400 mr-1" style="background-color: ${chat.status.includes('AI') ? '#25D366' : chat.status.includes('ADMIN') ? '#3b82f6' : '#ef4444'}"></span> Status: ${chat.status}`;
+
+            msgArea.innerHTML = '';
+            chat.messages.forEach(msg => {
+                const div = document.createElement('div');
+                let bubbleClass = '';
+                let label = '';
+                
+                if (msg.sender === 'customer') {
+                    div.className = 'flex justify-start mb-3';
+                    bubbleClass = 'chat-bubble-in';
+                } else if (msg.sender === 'admin') {
+                    div.className = 'flex justify-end mb-3';
+                    bubbleClass = 'chat-bubble-out';
+                } else if (msg.sender === 'ai') {
+                    div.className = 'flex justify-end mb-3';
+                    bubbleClass = 'chat-bubble-ai';
+                    label = '<span class="text-[10px] text-green-600 font-bold block mb-1 flex items-center gap-1"><i class="fas fa-robot"></i> ECO SPORT AI</span>';
+                }
+
+                div.innerHTML = `
+                    <div class="${bubbleClass} max-w-xs md:max-w-md p-3 shadow-sm relative">
+                        ${label}
+                        <p class="text-sm text-gray-800 whitespace-pre-wrap">${msg.text}</p>
+                        <span class="text-[10px] text-gray-400 block text-right mt-1">${formatTime(msg.time)}</span>
+                    </div>
+                `;
+                msgArea.appendChild(div);
+            });
+            msgArea.scrollTop = msgArea.scrollHeight;
+        }
+
+        function renderCustomerDetail() {
+            const chat = appState.chats.find(c => c.id === appState.activeChatId);
+            const panel = document.getElementById('customerDetailPanel');
+            
+            if (!chat) {
+                panel.innerHTML = `<div class="text-center text-gray-400 mt-10"><i class="fas fa-user-circle text-5xl mb-3"></i><p class="text-sm">Detail pelanggan akan muncul di sini</p></div>`;
+                return;
+            }
+
+            let collectedDataHtml = Object.entries(chat.orderData).map(([k, v]) => 
+                `<div class="flex justify-between text-sm border-b py-2"><span class="text-gray-500 capitalize">${k}</span><span class="font-medium text-gray-800 text-right">${v || '-'}</span></div>`
+            ).join('');
+
+            panel.innerHTML = `
+                <div class="text-center mb-6">
+                    <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold text-3xl mx-auto mb-2">
+                        ${chat.name.charAt(0)}
+                    </div>
+                    <h3 class="font-bold text-gray-800">${chat.name}</h3>
+                    <p class="text-xs text-gray-500">${chat.phone}</p>
+                </div>
+                
+                <div class="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                    <p class="text-xs text-gray-500 mb-1">Status Chat</p>
+                    <span class="font-bold text-sm text-gray-800">${chat.status}</span>
+                </div>
+
+                <h4 class="font-semibold text-gray-700 mb-2 text-sm border-b pb-2">Detail Pesanan Terkumpul</h4>
+                <div class="space-y-1 mb-4">
+                    ${collectedDataHtml || '<p class="text-xs text-gray-400 italic">AI sedang mengumpulkan data...</p>'}
+                </div>
+
+                ${chat.needsAdmin ? `
+                    <div class="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm animate-pulse">
+                        <strong class="flex items-center gap-2"><i class="fas fa-exclamation-triangle"></i> PERLU INTERVENSI ADMIN</strong>
+                        <p class="mt-1 text-xs">AI berhenti membalas. Mohon ditindaklanjuti segera.</p>
+                    </div>
+                ` : ''}
+            `;
+        }
+
+        // --- CHAT LOGIC ---
+        function selectChat(chatId) {
+            appState.activeChatId = chatId;
+            document.querySelector('main').classList.remove('hidden');
+            document.querySelector('main').classList.add('flex');
+            renderChatList();
+            renderMessages();
+            renderCustomerDetail();
+        }
+
+        function simulateIncomingMessage(text, phone = '628123456789', name = 'Pelanggan WhatsApp') {
+            let chat = appState.chats.find(c => c.phone === phone);
+            if (!chat) {
+                chat = {
+                    id: Date.now().toString(),
+                    name: name,
+                    phone: phone,
+                    status: '🟡 MENUNGGU ADMIN',
+                    messages: [],
+                    orderData: {},
+                    needsAdmin: false,
+                    aiTimer: null
+                };
+                appState.chats.unshift(chat);
+            }
+
+            chat.messages.push({ sender: 'customer', text: text, time: new Date() });
+            
+            // Escalation keywords check
+            const lowerText = text.toLowerCase();
+            if (['komplain', 'refund', 'negosiasi', 'mahal', 'gagal', 'tilang', 'bukti transfer'].some(k => lowerText.includes(k))) {
+                chat.needsAdmin = true;
+                chat.status = '🔴 PERLU INTERVENSI ADMIN';
+                renderChatList();
+                if (appState.activeChatId === chat.id) selectChat(chat.id);
+                return; // Stop AI
+            }
+
+            // Start AI Timer
+            if (chat.status !== '🔵 ADMIN ACTIVE' && appState.autoReply && appState.aiActive) {
+                chat.status = '🟡 MENUNGGU ADMIN';
+                clearTimeout(chat.aiTimer);
+                chat.aiTimer = setTimeout(() => {
+                    triggerAIResponse(chat.id, text);
+                }, appState.timer * 1000);
+            }
+
+            renderChatList();
+            if (appState.activeChatId === chat.id) {
+                renderMessages();
+            }
+        }
+
+        async function triggerAIResponse(chatId, userText) {
+            const chat = appState.chats.find(c => c.id === chatId);
+            if (!chat || chat.status === '🔵 ADMIN ACTIVE' || chat.needsAdmin) return; // Abort if admin took over or needs admin
+
+            chat.status = '🟢 AI ACTIVE';
+            renderChatList();
+            if (appState.activeChatId === chat.id) selectChat(chatId);
+
+            try {
+                const fullPrompt = `${appState.systemPrompt}\n\nDatabase Eco Sport:\n${appState.database}\n\nData Pesanan saat ini: ${JSON.stringify(chat.orderData)}`;
+
+                // Call Puter AI
+                const resp = await puter.ai.chat("openai/gpt-4o-mini", [
+                    { role: "system", content: fullPrompt },
+                    ...chat.messages.slice(-5).map(m => ({role: m.sender === 'customer' ? 'user' : 'assistant', content: m.text}))
+                ]);
+
+                let aiText = resp.message.content || "Maaf Kak, sistem saya sedang gangguan. Mohon tunggu admin membalas ya.";
+                
+                // Simple logic to extract data (Mockup - AI in reality would do this via function calling)
+                if(userText.match(/\d+\s*pcs/)) chat.orderData.jumlah = userText.match(/\d+/)[0];
+                if(userText.toLowerCase().includes('futsal')) chat.orderData.jenis = 'Futsal';
+                if(userText.toLowerCase().includes('bola')) chat.orderData.jenis = 'Sepak Bola';
+
+                chat.messages.push({ sender: 'ai', text: aiText, time: new Date() });
+                appState.stats.ai++;
+                
+                renderChatList();
+                if (appState.activeChatId === chat.id) {
+                    renderMessages();
+                    renderCustomerDetail();
+                }
+            } catch (error) {
+                console.error("AI Error:", error);
+                chat.messages.push({ sender: 'ai', text: "Maaf Kak, sistem AI sedang gangguan. Admin akan segera membalas.", time: new Date() });
+                renderMessages();
+            }
+        }
+
+        function adminTakeover() {
+            const chat = appState.chats.find(c => c.id === appState.activeChatId);
+            if (!chat) return;
+            
+            clearTimeout(chat.aiTimer); // Cancel pending AI reply
+            chat.status = '🔵 ADMIN ACTIVE';
+            chat.needsAdmin = false; // Reset flag
+            
+            renderChatList();
+            selectChat(chat.id);
+        }
+
+        function returnToAI() {
+            const chat = appState.chats.find(c => c.id === appState.activeChatId);
+            if (!chat) return;
+            
+            chat.status = '🟢 AI ACTIVE';
+            renderChatList();
+            selectChat(chat.id);
+        }
+
+        function adminSendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const chat = appState.chats.find(c => c.id === appState.activeChatId);
+            if (!chat) return;
+
+            // Force takeover if admin types manually
+            if (chat.status !== '🔵 ADMIN ACTIVE') {
+                adminTakeover();
+            }
+
+            chat.messages.push({ sender: 'admin', text: text, time: new Date() });
+            appState.stats.admin++;
+            input.value = '';
+            
+            renderChatList();
+            renderMessages();
+        }
+
+        function handleEnter(event) {
+            if (event.key === 'Enter') adminSendMessage();
+        }
+
+        // --- SETTINGS MODAL ---
+        function openSettings() {
+            document.getElementById('setSystemPrompt').value = appState.systemPrompt;
+            document.getElementById('setDatabase').value = appState.database;
+            document.getElementById('setTimer').value = appState.timer;
+            document.getElementById('settingsModal').classList.remove('hidden');
+            document.getElementById('settingsModal').classList.add('flex');
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.add('hidden');
+            document.getElementById('settingsModal').classList.remove('flex');
+        }
+
+        function saveSettings() {
+            appState.systemPrompt = document.getElementById('setSystemPrompt').value;
+            appState.database = document.getElementById('setDatabase').value;
+            appState.timer = parseInt(document.getElementById('setTimer').value);
+            appState.autoReply = document.getElementById('setAutoReply').checked;
+            appState.aiActive = document.getElementById('setAiActive').checked;
+            closeSettings();
+            alert('Pengaturan berhasil disimpan!');
+        }
+
+        // --- SIMULASI WEBHOOK PESAN MASUK ---
+        // Dalam produksi nyata, ini digantikan oleh endpoint webhook dari provider WA (Fonnte, Meta, dll)
+        setTimeout(() => {
+            simulateIncomingMessage("Halo kak, selamat siang. Saya mau tanya bikin jersey bisa tidak?", "6285709693800", "Budi Santoso");
+        }, 3000);
+        
+        setTimeout(() => {
+            simulateIncomingMessage("Kak, jersey futsal 10 pcs harganya berapa ya?", "628123456789", "Sari Dewi");
+        }, 15000);
+
+        // Initial Render
+        renderChatList();
+        updateStats();
+    </script>
+</body>
+</html>
