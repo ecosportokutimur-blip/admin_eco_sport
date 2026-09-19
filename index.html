@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ECO SPORT AI CUSTOMER SERVICE</title>
-    <!-- Library Puter.js untuk AI -->
+    <!-- Library Puter.js -->
     <script src="https://js.puter.com/v2/"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -21,13 +21,11 @@
         .scroll-y::-webkit-scrollbar { width: 4px; }
         .scroll-y::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
         
-        /* Layout Manager untuk Mobile & Desktop */
         .panel { transition: transform 0.3s ease-in-out; }
         @media (max-width: 768px) {
-            /* Di mobile, panel diatur lewat transform translateX */
-            #panel-chat { position: fixed; top: 56px; bottom: 0; left: 0; width: 100%; z-index: 30; transform: translateX(100%); }
+            #panel-chat { position: fixed; top: 56px; bottom: 56px; left: 0; width: 100%; z-index: 30; transform: translateX(100%); background: #efeae2; }
             #panel-chat.active { transform: translateX(0); }
-            #panel-detail { position: fixed; top: 56px; bottom: 0; right: 0; width: 85%; max-width: 320px; z-index: 40; transform: translateX(100%); box-shadow: -2px 0 5px rgba(0,0,0,0.1); }
+            #panel-detail { position: fixed; top: 56px; bottom: 0; right: 0; width: 85%; max-width: 320px; z-index: 40; transform: translateX(100%); box-shadow: -2px 0 10px rgba(0,0,0,0.1); background: white; }
             #panel-detail.active { transform: translateX(0); }
         }
         .animate-pulse-custom { animation: pulse-red 2s infinite; }
@@ -50,7 +48,7 @@
         </div>
         <div class="flex items-center space-x-2 text-sm">
             <span id="aiStatusBadge" class="hidden md:flex items-center space-x-1 bg-gray-700 px-2 py-1 rounded-full text-xs">
-                <i class="fas fa-circle text-red-500 text-[8px]"></i> AI Offline
+                <i id="aiStatusDot" class="fas fa-circle text-red-500 text-[8px]"></i> <span id="aiStatusText">AI Offline</span>
             </span>
             <a href="https://wa.me/6285709693800" target="_blank" class="flex items-center space-x-1 md:space-x-2 bg-green-700 px-2 md:px-3 py-1 rounded-full hover:bg-green-800 transition text-xs md:text-sm">
                 <i class="fab fa-whatsapp"></i> <span class="hidden md:inline">085709693800</span><span class="md:hidden">WA</span>
@@ -83,6 +81,11 @@
                 </div>
             </div>
             <div class="flex-1 scroll-y pb-4" id="chatList"></div>
+            <div class="p-2 border-t bg-gray-50">
+                <button onclick="simulateTestMessage()" class="w-full bg-gray-200 text-gray-700 text-xs py-2 rounded-lg hover:bg-gray-300 font-semibold">
+                    <i class="fas fa-flask"></i> Simulasi Pesan Masuk (Webhook)
+                </button>
+            </div>
         </aside>
 
         <!-- PANEL TENGAH: Percakapan -->
@@ -158,12 +161,12 @@
                 </div>
 
                 <div class="border-b pb-4">
-                    <h3 class="font-semibold text-gray-700 mb-2 text-sm">Waktu Respon AI</h3>
+                    <h3 class="font-semibold text-gray-700 mb-2 text-sm">Waktu Respon AI (Timer)</h3>
                     <select id="setTimer" class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none text-sm">
+                        <option value="5">5 Detik (Cepat)</option>
                         <option value="10">10 Detik</option>
                         <option value="30" selected>30 Detik (Default)</option>
                         <option value="60">1 Menit</option>
-                        <option value="120">2 Menit</option>
                         <option value="300">5 Menit</option>
                     </select>
                 </div>
@@ -174,8 +177,8 @@
                 </div>
 
                 <div class="border-b pb-4">
-                    <h3 class="font-semibold text-gray-700 mb-2 text-sm">Prompt Internal AI</h3>
-                    <textarea id="setSystemPrompt" class="w-full h-32 border rounded-lg p-2 text-xs focus:ring-2 focus:ring-green-500 focus:outline-none">Kamu adalah Eco Sport AI, asisten customer service untuk Percetakan Jersey Eco Sport. Tujuanmu adalah membantu pelanggan mendapatkan informasi dan melakukan pemesanan jersey dengan cepat, ramah, dan akurat. Jawablah dalam Bahasa Indonesia. Gunakan informasi dari database Eco Sport sebagai sumber utama. Jangan mengarang harga. Jika informasi tidak tersedia, arahkan ke admin. Jangan menanyakan terlalu banyak pertanyaan sekaligus.</textarea>
+                    <h3 class="font-semibold text-gray-700 mb-2 text-sm">Prompt Internal AI (Karakter)</h3>
+                    <textarea id="setSystemPrompt" class="w-full h-32 border rounded-lg p-2 text-xs focus:ring-2 focus:ring-green-500 focus:outline-none">Kamu adalah Eco Sport AI. Jawab dengan ramah, sopan, dan profesional dalam Bahasa Indonesia. Jangan mengarang harga. Jika tidak tahu, arahkan ke admin. Tanyakan detail pesanan satu per satu.</textarea>
                 </div>
 
                 <div class="flex justify-end gap-2 pt-2 pb-4 sticky bottom-0 bg-white">
@@ -186,11 +189,6 @@
         </div>
     </div>
 
-    <!-- Floating Button Connect AI -->
-    <button id="btnConnectAI" onclick="connectAI()" class="fixed bottom-4 right-4 bg-blue-600 text-white px-4 py-3 rounded-full shadow-lg z-40 flex items-center gap-2 text-sm font-semibold hover:bg-blue-700">
-        <i class="fas fa-plug"></i> Sambungkan AI
-    </button>
-
     <script>
         // --- STATE MANAGEMENT ---
         let appState = {
@@ -198,16 +196,14 @@
             aiActive: true,
             autoReply: true,
             timer: 30,
-            systemPrompt: "Kamu adalah Eco Sport AI. Jawablah dalam Bahasa Indonesia. Jangan mengarang harga. Jika tidak tahu, arahkan ke admin. Tanyakan detail pesanan satu per satu.",
+            systemPrompt: "Kamu adalah Eco Sport AI. Jawab dengan ramah, sopan, dan profesional dalam Bahasa Indonesia. Jangan mengarang harga. Jika tidak tahu, arahkan ke admin. Tanyakan detail pesanan satu per satu.",
             database: "Harga Jersey Futsal: 85.000/pcs. Harga Jersey Bola: 95.000/pcs. Minimal Order: 10 pcs. Bahan: Dryfit, Mesh, Full Print. Ukuran: S, M, L, XL, XXL. Lama Produksi: 5-7 Hari Kerja.",
             stats: { ai: 0, admin: 0 },
             chats: [],
             activeChatId: null
         };
 
-        let puterReady = false;
-
-        // --- FUNGSI NAVIGASI PANEL ---
+        // --- NAVIGASI PANEL MOBILE ---
         function showPanel(name) {
             if (window.innerWidth < 768) {
                 document.getElementById('panel-list').classList.remove('active');
@@ -218,33 +214,32 @@
             }
         }
 
-        // --- INISIALISASI AI PUTER ---
-        async function connectAI() {
+        // --- INISIALISASI STATUS AI ---
+        function checkPuterStatus() {
             try {
-                document.getElementById('btnConnectAI').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menghubungkan...';
-                // Paksa load user dari puter
-                if (!puter.auth.isSignedIn()) {
-                    puter.auth.signIn();
+                if (typeof puter !== 'undefined' && puter.auth && puter.auth.isSignedIn()) {
+                    updateAIStatus(true);
                 } else {
-                    puterReady = true;
-                    document.getElementById('btnConnectAI').classList.add('hidden');
-                    document.getElementById('aiStatusBadge').classList.remove('hidden');
-                    document.getElementById('aiStatusBadge').innerHTML = '<i class="fas fa-circle text-green-400 text-[8px]"></i> AI Online';
+                    updateAIStatus(false);
                 }
             } catch (e) {
-                document.getElementById('btnConnectAI').innerHTML = '<i class="fas fa-plug"></i> Coba Lagi';
+                updateAIStatus(false);
             }
         }
 
-        // Listener ketika user selesai login Puter
-        window.addEventListener('message', (event) => {
-            if (event.data && event.data.msg === 'puter.auth.signIn') {
-                puterReady = true;
-                document.getElementById('btnConnectAI').classList.add('hidden');
-                document.getElementById('aiStatusBadge').classList.remove('hidden');
-                document.getElementById('aiStatusBadge').innerHTML = '<i class="fas fa-circle text-green-400 text-[8px]"></i> AI Online';
+        function updateAIStatus(isOnline) {
+            const dot = document.getElementById('aiStatusDot');
+            const text = document.getElementById('aiStatusText');
+            if (isOnline) {
+                dot.classList.remove('text-red-500');
+                dot.classList.add('text-green-400');
+                text.innerText = 'AI Online';
+            } else {
+                dot.classList.remove('text-green-400');
+                dot.classList.add('text-red-500');
+                text.innerText = 'AI Offline';
             }
-        });
+        }
 
         // --- UTILITY & RENDERING ---
         function formatTime(date) { return new Date(date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }); }
@@ -377,7 +372,7 @@
             `;
         }
 
-        // --- LOGIKA CHAT ---
+        // --- LOGIKA CHAT & AI ---
         function selectChat(chatId) {
             appState.activeChatId = chatId;
             showPanel('chat');
@@ -432,9 +427,14 @@
             renderChatList();
             if (appState.activeChatId === chatId) { renderMessages(); renderCustomerDetail(); }
             
-            // Cek apakah Puter sudah siap
-            if(!puterReady) {
-                chat.messages.push({ sender: 'ai', text: "Maaf Kak, sistem AI sedang offline. Mohon tekan tombol 'Sambungkan AI' di kanan bawah layar, atau tunggu admin membalas.", time: new Date() });
+            // Validasi koneksi AI
+            let isOnline = false;
+            try { isOnline = puter.auth.isSignedIn(); } catch(e) { isOnline = false; }
+            updateAIStatus(isOnline);
+
+            if(!isOnline) {
+                removeTypingIndicator(chatId);
+                chat.messages.push({ sender: 'ai', text: "Maaf Kak, koneksi AI sedang offline. Mohon tunggu admin membalas ya.", time: new Date() });
                 renderMessages();
                 return;
             }
@@ -442,43 +442,73 @@
             showTypingIndicator(chatId);
 
             try {
-                const fullPrompt = `${appState.systemPrompt}\n\nDatabase Eco Sport:\n${appState.database}\n\nData Pesanan saat ini: ${JSON.stringify(chat.orderData)}`;
+                // Instruksi JSON Ketat agar AI fokus dan tidak ngawur
+                const instructionPrompt = `
+                    ${appState.systemPrompt}
+                    Database Eco Sport:
+                    ${appState.database}
+                    
+                    Data Pesanan saat ini: ${JSON.stringify(chat.orderData)}
+                    
+                    Balas pesan pelanggan. JANGAN mengarang di luar database. 
+                    Jika pelanggan menyebut jumlah (misal "10 pcs"), ubah nilai "Jumlah" di orderData.
+                    Jika pelanggan menyebut jenis (misal "futsal" atau "bola"), ubah nilai "Jenis" di orderData.
+                    Jawab DALAM FORMAT JSON STRICT seperti ini:
+                    {"reply": "Teks balasan ramah untuk pelanggan", "jumlah": "angka pcs atau null", "jenis": "jenis jersey atau null"}
+                `;
+
                 const resp = await puter.ai.chat("gpt-4o-mini", [
-                    { role: "system", content: fullPrompt },
+                    { role: "system", content: instructionPrompt },
                     ...chat.messages.slice(-5).map(m => ({role: m.sender === 'customer' ? 'user' : 'assistant', content: m.text}))
                 ]);
 
                 removeTypingIndicator(chatId);
 
-                // Validasi ekstraksi teks
                 let aiText = "";
+                let parsed = null;
+
+                // Ekstraksi teks dari berbagai kemungkinan format respons Puter
                 if (typeof resp === 'string') aiText = resp;
                 else if (resp?.message?.content) aiText = Array.isArray(resp.message.content) ? resp.message.content.map(c => c.text || "").join("") : resp.message.content;
                 else if (resp?.content) aiText = resp.content;
                 else if (resp?.text) aiText = resp.text;
-                else aiText = "Maaf Kak, pelayanan AI sedang lambat. Mohon tunggu admin.";
 
-                // Ekstraksi data otomatis
-                if(userText.match(/\d+\s*pcs/)) chat.orderData.Jumlah = userText.match(/\d+/)[0];
-                if(userText.toLowerCase().includes('futsal')) chat.orderData.Jenis = 'Futsal';
-                if(userText.toLowerCase().includes('bola')) chat.orderData.Jenis = 'Sepak Bola';
+                // Coba parse JSON yang dikembalikan AI
+                try {
+                    const jsonStr = aiText.substring(aiText.indexOf('{'), aiText.lastIndexOf('}') + 1);
+                    parsed = JSON.parse(jsonStr);
+                    aiText = parsed.reply || aiText;
+                    
+                    // Update data pesanan berdasarkan jawaban AI
+                    if(parsed.jenis) chat.orderData.Jenis = parsed.jenis;
+                    if(parsed.jumlah) chat.orderData.Jumlah = parsed.jumlah + " pcs";
+                } catch (e) {
+                    // Jika AI tidak membalas JSON, gunakan teks biasanya
+                    console.log("AI tidak merespons dengan JSON, menggunakan teks biasa.");
+                }
 
                 chat.messages.push({ sender: 'ai', text: aiText, time: new Date() });
                 appState.stats.ai++;
                 
                 renderChatList();
-                if (appState.activeChatId === chat.id) { renderMessages(); renderCustomerDetail(); }
+                if (appState.activeChatId === chatId) { renderMessages(); renderCustomerDetail(); }
 
             } catch (error) {
                 console.error("AI Error Detail: ", error);
                 removeTypingIndicator(chatId);
-                chat.messages.push({ sender: 'ai', text: "Maaf Kak, koneksi ke AI terputus. Silakan tunggu admin membalas.", time: new Date() });
+                let errMsg = "Maaf Kak, sistem AI sedang gangguan. Admin akan segera menghubungi Kakak.";
+                if(error.message && error.message.includes('auth')) {
+                    errMsg = "Sistem AI belum diizinkan. Silakan login ke Puter untuk mengaktifkan AI.";
+                }
+                chat.messages.push({ sender: 'ai', text: errMsg, time: new Date() });
                 renderMessages();
             }
         }
 
         function showTypingIndicator(chatId) {
             const msgArea = document.getElementById('chatMessages');
+            if(appState.activeChatId !== chatId) return;
+
             const div = document.createElement('div');
             div.id = `typing-${chatId}`;
             div.className = 'flex justify-end mb-2';
@@ -502,6 +532,7 @@
             const chat = appState.chats.find(c => c.id === appState.activeChatId);
             if (!chat) return;
             clearTimeout(chat.aiTimer);
+            removeTypingIndicator(chat.id);
             chat.status = '🔵 ADMIN ACTIVE';
             chat.needsAdmin = false;
             renderChatList(); renderMessages(); renderCustomerDetail();
@@ -532,6 +563,17 @@
 
         function handleEnter(event) { if (event.key === 'Enter') adminSendMessage(); }
 
+        // --- WEBHOOK TESTER ---
+        function simulateTestMessage() {
+            const msgs = [
+                "Halo kak, bikin jersey bola 15 pcs bisa?",
+                "Kak, mau tanya harga jersey futsal",
+                "Bisa custom nama dan nomor tidak?"
+            ];
+            const msg = msgs[Math.floor(Math.random() * msgs.length)];
+            simulateIncomingMessage(msg, "6285709693800", "Budi Santoso");
+        }
+
         // --- SETTINGS MODAL ---
         function openSettings() {
             document.getElementById('setSystemPrompt').value = appState.systemPrompt;
@@ -549,12 +591,16 @@
             closeSettings();
         }
 
-        // --- INISIALISASI ---
+        // --- INISIALISASI APLIKASI ---
         renderChatList();
         updateStats();
+        checkPuterStatus();
 
-        // Simulasi pesan masuk
-        setTimeout(() => { simulateIncomingMessage("Halo kak, bikin jersey bola 15 pcs bisa?", "6285709693800", "Budi"); }, 4000);
+        // Auto cek status AI setiap 5 detik
+        setInterval(checkPuterStatus, 5000);
+
+        // Simulasi pesan masuk pertama
+        setTimeout(() => { simulateIncomingMessage("Halo kak, selamat siang. Saya mau tanya bikin jersey bola 15 pcs bisa?", "6285709693800", "Budi Santoso"); }, 4000);
     </script>
 </body>
 </html>
