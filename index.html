@@ -23,7 +23,7 @@
         
         .panel { transition: transform 0.3s ease-in-out; }
         @media (max-width: 768px) {
-            #panel-chat { position: fixed; top: 56px; bottom: 56px; left: 0; width: 100%; z-index: 30; transform: translateX(100%); background: #efeae2; }
+            #panel-chat { position: fixed; top: 56px; bottom: 0; left: 0; width: 100%; z-index: 30; transform: translateX(100%); background: #efeae2; }
             #panel-chat.active { transform: translateX(0); }
             #panel-detail { position: fixed; top: 56px; bottom: 0; right: 0; width: 85%; max-width: 320px; z-index: 40; transform: translateX(100%); box-shadow: -2px 0 10px rgba(0,0,0,0.1); background: white; }
             #panel-detail.active { transform: translateX(0); }
@@ -47,7 +47,7 @@
             </div>
         </div>
         <div class="flex items-center space-x-2 text-sm">
-            <span id="aiStatusBadge" class="hidden md:flex items-center space-x-1 bg-gray-700 px-2 py-1 rounded-full text-xs">
+            <span id="aiStatusBadge" class="hidden md:flex items-center space-x-1 bg-gray-700 px-2 py-1 rounded-full text-xs cursor-pointer" onclick="forceLoginAI()">
                 <i id="aiStatusDot" class="fas fa-circle text-red-500 text-[8px]"></i> <span id="aiStatusText">AI Offline</span>
             </span>
             <a href="https://wa.me/6285709693800" target="_blank" class="flex items-center space-x-1 md:space-x-2 bg-green-700 px-2 md:px-3 py-1 rounded-full hover:bg-green-800 transition text-xs md:text-sm">
@@ -81,9 +81,12 @@
                 </div>
             </div>
             <div class="flex-1 scroll-y pb-4" id="chatList"></div>
-            <div class="p-2 border-t bg-gray-50">
-                <button onclick="simulateTestMessage()" class="w-full bg-gray-200 text-gray-700 text-xs py-2 rounded-lg hover:bg-gray-300 font-semibold">
-                    <i class="fas fa-flask"></i> Simulasi Pesan Masuk (Webhook)
+            <div class="p-2 border-t bg-gray-50 flex gap-2">
+                <button onclick="simulateTestMessage()" class="w-1/2 bg-gray-200 text-gray-700 text-xs py-2 rounded-lg hover:bg-gray-300 font-semibold">
+                    <i class="fas fa-flask"></i> Webhook
+                </button>
+                <button onclick="testAIDirect()" class="w-1/2 bg-blue-100 text-blue-700 text-xs py-2 rounded-lg hover:bg-blue-200 font-semibold">
+                    <i class="fas fa-vial"></i> Tes AI
                 </button>
             </div>
         </aside>
@@ -237,7 +240,15 @@
             } else {
                 dot.classList.remove('text-green-400');
                 dot.classList.add('text-red-500');
-                text.innerText = 'AI Offline';
+                text.innerText = 'AI Offline (Klik Login)';
+            }
+        }
+
+        function forceLoginAI() {
+            try {
+                puter.auth.signIn();
+            } catch(e) {
+                alert("Gagal membuka popup login. Pastikan browser tidak memblokir popup.");
             }
         }
 
@@ -419,6 +430,19 @@
             if (appState.activeChatId === chat.id) renderMessages();
         }
 
+        // Fungsi langsung test AI tanpa WhatsApp
+        async function testAIDirect() {
+            let isOnline = false;
+            try { isOnline = puter.auth.isSignedIn(); } catch(e) { isOnline = false; }
+            
+            if(!isOnline) {
+                alert("AI sedang Offline. Klik tulisan 'AI Offline' di kanan atas untuk login/izinkan Puter terlebih dahulu.");
+                return;
+            }
+
+            simulateTestMessage(); // Memicu pesan masuk
+        }
+
         async function triggerAIResponse(chatId, userText) {
             const chat = appState.chats.find(c => c.id === chatId);
             if (!chat || chat.status === '🔵 ADMIN ACTIVE' || chat.needsAdmin) return;
@@ -427,7 +451,6 @@
             renderChatList();
             if (appState.activeChatId === chatId) { renderMessages(); renderCustomerDetail(); }
             
-            // Validasi koneksi AI
             let isOnline = false;
             try { isOnline = puter.auth.isSignedIn(); } catch(e) { isOnline = false; }
             updateAIStatus(isOnline);
@@ -442,50 +465,34 @@
             showTypingIndicator(chatId);
 
             try {
-                // Instruksi JSON Ketat agar AI fokus dan tidak ngawur
-                const instructionPrompt = `
+                // Format prompt natural tanpa JSON agar AI mudah menjawab
+                const prompt = `
                     ${appState.systemPrompt}
-                    Database Eco Sport:
-                    ${appState.database}
-                    
+                    Database Eco Sport: ${appState.database}
                     Data Pesanan saat ini: ${JSON.stringify(chat.orderData)}
                     
-                    Balas pesan pelanggan. JANGAN mengarang di luar database. 
-                    Jika pelanggan menyebut jumlah (misal "10 pcs"), ubah nilai "Jumlah" di orderData.
-                    Jika pelanggan menyebut jenis (misal "futsal" atau "bola"), ubah nilai "Jenis" di orderData.
-                    Jawab DALAM FORMAT JSON STRICT seperti ini:
-                    {"reply": "Teks balasan ramah untuk pelanggan", "jumlah": "angka pcs atau null", "jenis": "jenis jersey atau null"}
+                    Balas pesan pelanggan ini: "${userText}"
                 `;
 
+                // Panggilan Puter AI Paling Stabil
                 const resp = await puter.ai.chat("gpt-4o-mini", [
-                    { role: "system", content: instructionPrompt },
-                    ...chat.messages.slice(-5).map(m => ({role: m.sender === 'customer' ? 'user' : 'assistant', content: m.text}))
-                ]);
+                    { role: "system", content: prompt },
+                    { role: "user", content: userText }
+                ], { stream: false });
 
                 removeTypingIndicator(chatId);
 
                 let aiText = "";
-                let parsed = null;
-
-                // Ekstraksi teks dari berbagai kemungkinan format respons Puter
                 if (typeof resp === 'string') aiText = resp;
                 else if (resp?.message?.content) aiText = Array.isArray(resp.message.content) ? resp.message.content.map(c => c.text || "").join("") : resp.message.content;
                 else if (resp?.content) aiText = resp.content;
                 else if (resp?.text) aiText = resp.text;
+                else aiText = "Maaf Kak, pelayanan AI sedang lambat. Mohon tunggu admin.";
 
-                // Coba parse JSON yang dikembalikan AI
-                try {
-                    const jsonStr = aiText.substring(aiText.indexOf('{'), aiText.lastIndexOf('}') + 1);
-                    parsed = JSON.parse(jsonStr);
-                    aiText = parsed.reply || aiText;
-                    
-                    // Update data pesanan berdasarkan jawaban AI
-                    if(parsed.jenis) chat.orderData.Jenis = parsed.jenis;
-                    if(parsed.jumlah) chat.orderData.Jumlah = parsed.jumlah + " pcs";
-                } catch (e) {
-                    // Jika AI tidak membalas JSON, gunakan teks biasanya
-                    console.log("AI tidak merespons dengan JSON, menggunakan teks biasa.");
-                }
+                // Ekstraksi data manual (Sangat akurat)
+                if(userText.match(/\d+\s*pcs/)) chat.orderData.Jumlah = userText.match(/\d+/)[0] + " pcs";
+                if(userText.toLowerCase().includes('futsal')) chat.orderData.Jenis = 'Futsal';
+                if(userText.toLowerCase().includes('bola')) chat.orderData.Jenis = 'Sepak Bola';
 
                 chat.messages.push({ sender: 'ai', text: aiText, time: new Date() });
                 appState.stats.ai++;
@@ -498,7 +505,7 @@
                 removeTypingIndicator(chatId);
                 let errMsg = "Maaf Kak, sistem AI sedang gangguan. Admin akan segera menghubungi Kakak.";
                 if(error.message && error.message.includes('auth')) {
-                    errMsg = "Sistem AI belum diizinkan. Silakan login ke Puter untuk mengaktifkan AI.";
+                    errMsg = "Sistem AI belum diizinkan. Klik tulisan AI Offline di kanan atas untuk login.";
                 }
                 chat.messages.push({ sender: 'ai', text: errMsg, time: new Date() });
                 renderMessages();
